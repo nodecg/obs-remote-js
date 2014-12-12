@@ -3,29 +3,38 @@
 
     function OBSRemote() {
         Object.defineProperty(this, "apiVersion", {value: 1.1, writable: false});
+
+        this._connected = false;
+        this._socket = undefined;
+        this._messageCounter = 0;
+        this._responseCallbacks = [];
+
     }
 
     Object.defineProperty(OBSRemote, "DEFAULT_PORT", {value: 4444, writable: false});
     Object.defineProperty(OBSRemote, "WS_PROTOCOL", {value: "obsapi", writable: false});
 
-    var _connected = false,
-        _socket = undefined,
-        _messageCounter = 0,
-        _responseCallbacks = [];
-
     /**
      * Try to connect to OBS, with optional password
-     * @param address "ipAddress:port"
+     * @param address "ipAddress" or "ipAddress:port"
+     *        defaults to "localhost"
      * @param password Optional authentication password
      */
     OBSRemote.prototype.connect = function (address, password) {
         // Password is optional, set to empty string if undefined
-        password = (typeof password === "undefined") ? "" : password;
+        password = (typeof password === "undefined") ?
+            "" :
+            password;
+
+        // Check for address
+        address = (typeof address === "undefined" || address === "") ?
+            "localhost" :
+            address;
 
         // Check for port number, if missing use 4444
         var colonIndex = address.indexOf(':');
-        if (colonIndex < 0 || colonIndex == address.length - 1) {
-            address += ":" + this.DEFAULT_PORT;
+        if (colonIndex < 0 || colonIndex === address.length - 1) {
+            address += ":" + OBSRemote.DEFAULT_PORT;
         }
 
         // Check if we already have a connection
@@ -35,7 +44,7 @@
         }
 
         // Connect and setup WebSocket callbacks
-        this._socket = new WebSocket("ws://" + address, this.WS_PROTOCOL);
+        this._socket = new WebSocket("ws://" + address, OBSRemote.WS_PROTOCOL);
 
         var self = this;
 
@@ -61,7 +70,9 @@
 
     OBSRemote.prototype.toggleStream = function (previewOnly) {
         // previewOnly is optional, default to false
-        previewOnly = (typeof previewOnly === "undefined") ? false : previewOnly;
+        previewOnly = (typeof previewOnly === "undefined") ?
+            false :
+            previewOnly;
 
         var msg = {
             "request-type": "StartStopStreaming",
@@ -71,28 +82,24 @@
         this._sendMessage(msg);
     };
 
-    OBSRemote.prototype.onConnectionOpened = function () {
-    };
+    OBSRemote.prototype.onConnectionOpened = function () {};
 
-    OBSRemote.prototype.onConnectionClosed = function () {
-    };
+    OBSRemote.prototype.onConnectionClosed = function () {};
 
-    OBSRemote.prototype.onConnectionFailed = function () {
-    };
+    OBSRemote.prototype.onConnectionFailed = function () {};
 
-    OBSRemote.prototype.onStreamStarted = function (previewOnly) {
-    };
+    OBSRemote.prototype.onStreamStarted = function (previewOnly) {};
 
-    OBSRemote.prototype.onStreamStopped = function (previewOnly) {
-    };
+    OBSRemote.prototype.onStreamStopped = function (previewOnly) {};
 
     OBSRemote.prototype._sendMessage = function (message, callback) {
         if (this._connected) {
             var msgId = this._getNextMsgId();
 
             // Ensure callback isn't undefined, empty function one is not given/needed
-            callback = (typeof callback === "undefined") ? function () {
-            } : callback;
+            callback = (typeof callback === "undefined") ?
+                function () {} :
+                callback;
 
             // Store the callback with the message ID
             this._responseCallbacks[msgId] = callback;
@@ -126,7 +133,7 @@
                     this._onStreamStopping(message);
                     break;
                 default:
-                    console.warn("[NODECG] Unknown OBS update type: " + updateType);
+                    console.warn("[OBSRemote] Unknown OBS update type: " + updateType);
             }
         }
     };
