@@ -1,0 +1,20 @@
+{
+  "name": "obs-remote",
+  "version": "0.1.0",
+  "homepage": "https://github.com/MattMcNam/obs-remote-js",
+  "authors": [
+    "Matthew McNamara <matt@mattmcn.com>"
+  ],
+  "description": "OBS Remote API for Node.JS and browsers",
+  "main": [
+    "src/obs-remote.js"
+  ],
+  "keywords": [
+    "obs",
+    "remote"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*"
+  ]
+}
