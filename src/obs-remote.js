@@ -68,6 +68,15 @@
         };
     };
 
+    OBSRemote.prototype.authenticate = function (password, callback) {
+
+    }
+
+    /**
+     * Starts or stops OBS from streaming, recording, or previewing.
+     * Result of this will be either the onStreamStarted or onStreamStopped callback.
+     * @param previewOnly Only toggle the preview
+     */
     OBSRemote.prototype.toggleStream = function (previewOnly) {
         // previewOnly is optional, default to false
         previewOnly = (typeof previewOnly === "undefined") ?
@@ -80,6 +89,38 @@
         };
 
         this._sendMessage(msg);
+    };
+
+    /**
+     * Requests OBS Remote version
+     * @param callback function(Number version)
+     */
+    OBSRemote.prototype.getVersion = function (callback) {
+        var msg = {
+            "request-type": "GetVersion"
+        };
+
+        function cb (message) {
+            callback(message.version);
+        }
+
+        this._sendMessage(msg, cb);
+    };
+
+    /**
+     * Checks if authentication is required
+     * @param callback function(Boolean required)
+     */
+    OBSRemote.prototype.isAuthRequired = function (callback) {
+        var msg = {
+            "request-type": "GetAuthRequired"
+        };
+
+        function cb (message) {
+            callback(message.authRequired);
+        }
+
+        this._sendMessage(msg, cb);
     };
 
     OBSRemote.prototype.onConnectionOpened = function () {};
@@ -135,6 +176,16 @@
                 default:
                     console.warn("[OBSRemote] Unknown OBS update type: " + updateType);
             }
+        } else {
+            var msgId = message["response-id"];
+
+            if (message.status === "error") {
+                console.error("[OBSRemote] Error:", message.error);
+            }
+
+            var callback = this._responseCallbacks[msgId];
+            callback(message);
+            delete this._responseCallbacks[msgId];
         }
     };
 
