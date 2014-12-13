@@ -15,17 +15,21 @@
 
     // IE11 crypto object is prefixed
     var crypto = window.crypto || window.msCrypto || {};
-    // Safari crypto.subtle is prefixed
-    crypto.subtle = crypto.subtle || crypto.webkitSubtle || undefined;
+
     OBSRemote.prototype._authHash = _webCryptoHash;
 
     if (typeof crypto.subtle === "undefined") {
-        // Native crypto not available, fall back to CryptoJS
-        if (typeof CryptoJS === "undefined") {
-            throw new Error("OBS Remote requires CryptoJS when native crypto is not available!");
-        }
+        // Safari crypto.subtle is prefixed, all other browsers use subtle or don't implement
+        if (typeof crypto.webkitSubtle === "undefined") {
+            // Native crypto not available, fall back to CryptoJS
+            if (typeof CryptoJS === "undefined") {
+                throw new Error("OBS Remote requires CryptoJS when native crypto is not available!");
+            }
 
-        OBSRemote.prototype._authHash = _cryptoJSHash;
+            OBSRemote.prototype._authHash = _cryptoJSHash;
+        } else {
+            crypto.subtle = crypto.webkitSubtle;
+        }
     }
 
     Object.defineProperty(OBSRemote, "DEFAULT_PORT", {value: 4444, writable: false});
