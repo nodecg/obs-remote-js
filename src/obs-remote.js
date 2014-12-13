@@ -1,4 +1,5 @@
 (function () {
+    /*jshint plusplus: false */
     'use strict';
 
     function OBSRemote() {
@@ -7,8 +8,24 @@
         this._connected = false;
         this._socket = undefined;
         this._messageCounter = 0;
-        this._responseCallbacks = [];
+        this._responseCallbacks = {};
 
+        this._auth = {salt: "", challenge: ""};
+    }
+
+    // IE11 crypto object is prefixed
+    var crypto = window.crypto || window.msCrypto || {};
+    // Safari crypto.subtle is prefixed
+    crypto.subtle = crypto.subtle || crypto.webkitSubtle || undefined;
+    OBSRemote.prototype._authHash = _webCryptoHash;
+
+    if (typeof crypto.subtle === "undefined") {
+        // Native crypto not available, fall back to CryptoJS
+        if (typeof CryptoJS === "undefined") {
+            throw new Error("OBS Remote requires CryptoJS when native crypto is not available!");
+        }
+
+        OBSRemote.prototype._authHash = _cryptoJSHash;
     }
 
     Object.defineProperty(OBSRemote, "DEFAULT_PORT", {value: 4444, writable: false});
@@ -51,6 +68,12 @@
         this._socket.onopen = function (event) {
             self._connected = true;
             self.onConnectionOpened();
+
+            self.isAuthRequired(function(required) {
+                if (!required) return;
+
+                self.authenticate(password);
+            })
         };
 
         this._socket.onclose = function (code, reason, wasClean) {
@@ -68,9 +91,32 @@
         };
     };
 
-    OBSRemote.prototype.authenticate = function (password, callback) {
+    OBSRemote.prototype.authenticate = function (password) {
+        var self = this;
+        this._authHash(password, function(authResp) {
+            var msg = {
+                "request-type": "Authenticate",
+                "auth": authResp
+            };
 
-    }
+            function cb(message) {
+                var successful = (message.status === "ok");
+                var remainingAttempts = 0;
+
+                if (!successful) {
+                    // TODO: improve and pull request I guess?
+                    // ¯\_(ツ)_/¯
+                    remainingAttempts = message.error.substr(43);
+
+                    self.onAuthenticationFailed(remainingAttempts);
+                } else {
+                    self.onAuthenticationSuccessful();
+                }
+            }
+
+            self._sendMessage(msg, cb);
+        })
+    };
 
     /**
      * Starts or stops OBS from streaming, recording, or previewing.
@@ -116,8 +162,16 @@
             "request-type": "GetAuthRequired"
         };
 
+        var self = this;
         function cb (message) {
-            callback(message.authRequired);
+            var authRequired = message.authRequired;
+
+            if (authRequired) {
+                self._auth.salt = message.salt;
+                self._auth.challenge = message.challenge;
+            }
+
+            callback(authRequired);
         }
 
         this._sendMessage(msg, cb);
@@ -132,6 +186,10 @@
     OBSRemote.prototype.onStreamStarted = function (previewOnly) {};
 
     OBSRemote.prototype.onStreamStopped = function (previewOnly) {};
+
+    OBSRemote.prototype.onAuthenticationSuccessful = function () {};
+
+    OBSRemote.prototype.onAuthenticationFailed = function (remainingAttempts) {};
 
     OBSRemote.prototype._sendMessage = function (message, callback) {
         if (this._connected) {
@@ -177,7 +235,7 @@
                     console.warn("[OBSRemote] Unknown OBS update type: " + updateType);
             }
         } else {
-            var msgId = message["response-id"];
+            var msgId = message["message-id"];
 
             if (message.status === "error") {
                 console.error("[OBSRemote] Error:", message.error);
@@ -198,6 +256,78 @@
         var previewOnly = message["preview-only"];
         this.onStreamStopped(previewOnly);
     };
+
+    function _webCryptoHash(pass, callback) {
+        var utf8Pass = _encodeStringAsUTF8(pass);
+        var utf8Salt = _encodeStringAsUTF8(this._auth.salt);
+
+        var ab1 = _stringToArrayBuffer(utf8Pass + utf8Salt);
+
+        var self = this;
+        crypto.subtle.digest("SHA-256", ab1)
+            .then(function (authHash) {
+                var utf8AuthHash = _encodeStringAsUTF8(_arrayBufferToBase64(authHash));
+                var utf8Challenge = _encodeStringAsUTF8(self._auth.challenge);
+
+                var ab2 = _stringToArrayBuffer(utf8AuthHash + utf8Challenge);
+
+                crypto.subtle.digest("SHA-256", ab2)
+                    .then(function(authResp) {
+                        var authRespB64 = _arrayBufferToBase64(authResp);
+                        callback(authRespB64);
+                    });
+            });
+    }
+
+    function _cryptoJSHash(pass, callback) {
+        var utf8Pass = _encodeStringAsUTF8(pass);
+        var utf8Salt = _encodeStringAsUTF8(this._auth.salt);
+
+        var authHash = CryptoJS.SHA256(utf8Pass + utf8Salt).toString(CryptoJS.enc.Base64);
+
+        var utf8AuthHash = _encodeStringAsUTF8(authHash);
+        var utf8Challenge = _encodeStringAsUTF8(this._auth.challenge);
+
+        var authResp = CryptoJS.SHA256(utf8AuthHash + utf8Challenge).toString(CryptoJS.enc.Base64);
+
+        callback(authResp);
+    }
+
+    function _encodeStringAsUTF8(string) {
+        return unescape(encodeURIComponent(string));
+    }
+
+    function _stringToArrayBuffer(string) {
+        var ret = new Uint8Array(string.length);
+        for (var i = 0; i < string.length; i++) {
+            ret[i] = string.charCodeAt(i);
+        }
+        return ret.buffer;
+    }
+
+    function _arrayBufferToBase64(arrayBuffer) {
+        var alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+        var base64String = "";
+        var n, p, bits;
+
+        var uint8 = new Uint8Array(arrayBuffer);
+        var len = arrayBuffer.byteLength * 8;
+        for (var offset = 0; offset < len; offset += 6) {
+            n = (offset/8) | 0;
+            p = offset % 8;
+            bits = ((uint8[n] || 0) << p) >> 2;
+            if (p > 2) {
+                bits |= (uint8[n+1] || 0) >> (10 - p);
+            }
+            base64String += alphabet.charAt(bits & 63);
+        }
+        base64String += (p == 4) ?
+            '=' :
+            (p == 6) ?
+                '==':
+                '';
+        return base64String;
+    }
 
     if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
         module.exports = OBSRemote;
