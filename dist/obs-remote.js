@@ -1,3 +1,42 @@
+/*!
+ * OBS Remote JS API v1.0.0 (https://github.com/nodecg/obs-remote-js)
+ * Copyright 2014 Matthew McNamara <matt@mattmcn.com>
+ * Licensed under MIT (https://github.com/nodecg/obs-remote-js/blob/master/LICENSE)
+ */
+(function () {
+    'use strict';
+
+    function OBSSource(width, height, x, y, name, rendered) {
+        this.width = width || 0;
+        this.height = height || 0;
+        this.x = x || 0;
+        this.y = y || 0;
+        this.name = name || '';
+        this.rendered = rendered || false;
+    }
+
+    if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
+        module.exports.OBSSource = OBSSource;
+    } else {
+        window.OBSSource = OBSSource;
+    }
+})();
+
+(function () {
+    'use strict';
+
+    function OBSScene(name, sources) {
+        this.name = name || '';
+        this.sources = sources || [];
+    }
+
+    if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
+        module.exports.OBSScene = OBSScene;
+    } else {
+        window.OBSScene = OBSScene;
+    }
+})();
+
 (function () {
     'use strict';
 
@@ -169,6 +208,12 @@
 
         this._sendMessage("GetAuthRequired", cb);
     };
+
+    OBSRemote.prototype.getSceneList = function (callback) {
+        function cb (message) {
+
+        }
+    }
 
     OBSRemote.prototype.onConnectionOpened = function () {};
 

@@ -1,0 +1,9 @@
+# Node
+node_modules/
+
+# OS specific
+.DS_Store
+
+# JetBrains IDEs (IntelliJ/WebStorm)
+.idea/
+*.iml

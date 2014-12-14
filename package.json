@@ -1,0 +1,32 @@
+{
+  "name": "obs-remote",
+  "version": "1.0.0",
+  "description": "OBS Remote API for Node.JS and browsers",
+  "main": "src/obs-remote.js",
+  "dependencies": {},
+  "devDependencies": {
+    "grunt": "^0.4.5",
+    "grunt-contrib-clean": "^0.6.0",
+    "grunt-contrib-concat": "^0.5.0",
+    "grunt-contrib-jshint": "^0.10.0",
+    "grunt-contrib-uglify": "^0.6.0",
+    "load-grunt-tasks": "^1.0.0",
+    "time-grunt": "^1.0.0"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nodecg/obs-remote-js.git"
+  },
+  "author": "Matthew McNamara <matt@mattmcn.com>",
+  "license": {
+    "type": "MIT",
+    "url": "https://github.com/nodecg/obs-remote-js/blob/master/LICENSE"
+  },
+  "bugs": {
+    "url": "https://github.com/nodecg/obs-remote-js/issues"
+  },
+  "homepage": "https://github.com/nodecg/obs-remote-js"
+}
