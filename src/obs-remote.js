@@ -76,7 +76,7 @@
                 if (!required) return;
 
                 self.authenticate(password);
-            })
+            });
         };
 
         this._socket.onclose = function (code, reason, wasClean) {
@@ -94,12 +94,14 @@
         };
     };
 
+    /**
+     * Attempts to authenticate with OBS
+     * Will cause either onAuthenticationFailed or onAuthenticationSucceeded to be called
+     * @param password the password to try authenticating with
+     */
     OBSRemote.prototype.authenticate = function (password) {
         var self = this;
         this._authHash(password, function(authResp) {
-            var args = {
-                "auth": authResp
-            };
 
             function cb(message) {
                 var successful = (message.status === "ok");
@@ -112,12 +114,14 @@
 
                     self.onAuthenticationFailed(remainingAttempts);
                 } else {
-                    self.onAuthenticationSuccessful();
+                    self.onAuthenticationSucceeded();
                 }
             }
 
-            self._sendMessage("Authenticate", args, cb);
-        })
+            self._sendMessage("Authenticate", {
+                "auth": authResp
+            }, cb);
+        });
     };
 
     /**
@@ -131,11 +135,9 @@
             false :
             previewOnly;
 
-        var args = {
+        this._sendMessage("StartStopStreaming", {
             "preview-only": previewOnly
-        };
-
-        this._sendMessage("StartStopStreaming", args);
+        });
     };
 
     /**
@@ -152,7 +154,7 @@
 
     /**
      * Checks if authentication is required
-     * @param callback function(Boolean required)
+     * @param callback function(Boolean isRequired)
      */
     OBSRemote.prototype.isAuthRequired = function (callback) {
         var self = this;
@@ -170,6 +172,50 @@
         this._sendMessage("GetAuthRequired", cb);
     };
 
+    /**
+     * Gets name of current scene and full list of all other scenes
+     * @param callback function(String currentScene, Array scenes)
+     */
+    OBSRemote.prototype.getSceneList = function (callback) {
+        function cb (message) {
+            var currentScene = message["current-scene"];
+            var scenes = [];
+
+            message.scenes.forEach(function(scene) {
+                _convertToOBSScene(scene);
+            });
+
+            callback(currentScene, scenes);
+        }
+
+        this._sendMessage("GetSceneList", cb);
+    };
+
+    /**
+     * Gets the current scene and full list of sources
+     * @param callback function(OBSScene scene)
+     */
+    OBSRemote.prototype.getCurrentScene = function(callback) {
+        function cb (message) {
+            var obsScene = _convertToOBSScene(message);
+
+            callback(obsScene);
+        }
+
+        this._sendMessage("GetCurrentScene", cb);
+    };
+
+    /**
+     * Tells OBS to switch to the given scene name
+     * If successful the onSceneSwitched() callback will be called
+     * @param sceneName name of scene to switch to
+     */
+    OBSRemote.prototype.setCurrentScene = function(sceneName) {
+        this._sendMessage("SetCurrentScene", {
+            "scene-name": sceneName
+        });
+    };
+
     OBSRemote.prototype.onConnectionOpened = function () {};
 
     OBSRemote.prototype.onConnectionClosed = function () {};
@@ -180,7 +226,9 @@
 
     OBSRemote.prototype.onStreamStopped = function (previewOnly) {};
 
-    OBSRemote.prototype.onAuthenticationSuccessful = function () {};
+    OBSRemote.prototype.onSceneSwitched = function (sceneName) {};
+
+    OBSRemote.prototype.onAuthenticationSucceeded = function () {};
 
     OBSRemote.prototype.onAuthenticationFailed = function (remainingAttempts) {};
 
@@ -235,6 +283,9 @@
                     break;
                 case "StreamStopping":
                     this._onStreamStopping(message);
+                    break;
+                case "SwitchScenes":
+                    this.onSceneSwitched(message["scene-name"]);
                     break;
                 default:
                     console.warn("[OBSRemote] Unknown OBS update type: " + updateType);
@@ -332,6 +383,21 @@
                 '==':
                 '';
         return base64String;
+    }
+
+    function _convertToOBSScene(scene) {
+        var name = scene.name;
+        var sources = [];
+
+        scene.sources.forEach(function(source) {
+            sources.push(_convertToOBSSource(source));
+        });
+
+        return new OBSScene(name, sources);
+    }
+
+    function _convertToOBSSource(source) {
+        return new OBSSource(source.cx, source.cy, source.x, source.y, source.name, source.render);
     }
 
     if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
