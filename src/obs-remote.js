@@ -182,7 +182,7 @@
             var scenes = [];
 
             message.scenes.forEach(function(scene) {
-                _convertToOBSScene(scene);
+                scenes.push(_convertToOBSScene(scene));
             });
 
             callback(currentScene, scenes);
@@ -387,16 +387,17 @@
         if (updateType) {
             switch (updateType) {
                 case "StreamStarting":
-                    this._onStreamStarting(message);
+                    this.onStreamStarted(message["preview-only"]);
                     break;
                 case "StreamStopping":
-                    this._onStreamStopping(message);
+                    this.onStreamStopped(message["preview-only"]);
                     break;
                 case "SwitchScenes":
                     this.onSceneSwitched(message["scene-name"]);
                     break;
                 default:
-                    console.warn("[OBSRemote] Unknown OBS update type: " + updateType);
+                    console.warn("[OBSRemote] Unknown OBS update type:", updateType, ", full message:");
+                    console.warn(message);
             }
         } else {
             var msgId = message["message-id"];
@@ -409,16 +410,6 @@
             callback(message);
             delete this._responseCallbacks[msgId];
         }
-    };
-
-    OBSRemote.prototype._onStreamStarting = function(message) {
-        var previewOnly = message["preview-only"];
-        this.onStreamStarted(previewOnly);
-    };
-
-    OBSRemote.prototype._onStreamStopping = function(message) {
-        var previewOnly = message["preview-only"];
-        this.onStreamStopped(previewOnly);
     };
 
     function _webCryptoHash(pass, callback) {
