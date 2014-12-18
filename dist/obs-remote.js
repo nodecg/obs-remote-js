@@ -221,7 +221,7 @@
             var scenes = [];
 
             message.scenes.forEach(function(scene) {
-                _convertToOBSScene(scene);
+                scenes.push(_convertToOBSScene(scene));
             });
 
             callback(currentScene, scenes);
@@ -363,21 +363,96 @@
         });
     };
 
+    /**
+     * OBSRemote API callbacks
+     */
+
+    /**
+     * Called when the connection to OBS is made
+     * You may still need to authenticate!
+     */
     OBSRemote.prototype.onConnectionOpened = function() {};
 
+    /**
+     * Called when the connection to OBS is closed
+     */
     OBSRemote.prototype.onConnectionClosed = function() {};
 
+    /**
+     * Called when the connection to OBS fails
+     */
     OBSRemote.prototype.onConnectionFailed = function() {};
 
-    OBSRemote.prototype.onStreamStarted = function(previewOnly) {};
-
-    OBSRemote.prototype.onStreamStopped = function(previewOnly) {};
-
-    OBSRemote.prototype.onSceneSwitched = function(sceneName) {};
-
+    /**
+     * Called when authentication is successful
+     */
     OBSRemote.prototype.onAuthenticationSucceeded = function() {};
 
+    /**
+     * Called when authentication fails
+     * @param remainingAttempts how many more attempts can be made
+     */
     OBSRemote.prototype.onAuthenticationFailed = function(remainingAttempts) {};
+
+    /**
+     * OBS standard callbacks
+     */
+
+    /**
+     * Called when OBS starts streaming, recording or previewing
+     * @param previewing are we previewing or 'LIVE'
+     */
+    OBSRemote.prototype.onStreamStarted = function(previewing) {};
+
+    /**
+     * Called when OBS stops streaming, recording or previewing
+     * @param previewing were we previewing, or 'LIVE'
+     */
+    OBSRemote.prototype.onStreamStopped = function(previewing) {};
+
+    /**
+     * Called frequently by OBS while live or previewing
+     * @param streaming are we streaming (or recording)
+     * @param previewing are we previewing or live
+     * @param bytesPerSecond
+     * @param strain
+     * @param streamDurationInMS
+     * @param totalFrames
+     * @param droppedFrames
+     * @param framesPerSecond
+     */
+    OBSRemote.prototype.onStatusUpdate = function(streaming, previewing, bytesPerSecond, strain, streamDurationInMS, totalFrames, droppedFrames, framesPerSecond) {};
+
+    /**
+     * Called when OBS switches scene
+     * @param sceneName scene OBS has switched to
+     */
+    OBSRemote.prototype.onSceneSwitched = function(sceneName) {};
+
+    /**
+     * Called when the scene list changes (new order, addition, removal or renaming)
+     * @param scenes new list of scenes
+     */
+    OBSRemote.prototype.onScenesChanged = function(scenes) {};
+
+    /**
+     * Called when source oder changes in the current scene
+     * @param sources
+     */
+    OBSRemote.prototype.onSourceOrderChanged = function(sources) {};
+
+    /**
+     * Called when a source is added or removed from the current scene
+     * @param sources
+     */
+    OBSRemote.prototype.onSourceAddedOrRemoved = function(sources) {};
+
+    /**
+     * Called when a source in the current scene changes
+     * @param originalName if the name changed, this is what it was originally
+     * @param source
+     */
+    OBSRemote.prototype.onSourceChanged = function(originalName, source) {};
 
     OBSRemote.prototype._sendMessage = function(requestType, args, callback) {
         if (this._connected) {
@@ -391,7 +466,7 @@
 
             // Ensure message isn't undefined, use empty object
             args = (typeof args === "undefined") ?
-                {} :
+            {} :
                 args;
 
             // Ensure callback isn't undefined, use empty function
@@ -421,21 +496,51 @@
             return;
         }
 
+        var self = this;
         // Check if this is an update event
         var updateType = message["update-type"];
         if (updateType) {
             switch (updateType) {
                 case "StreamStarting":
-                    this._onStreamStarting(message);
+                    this.onStreamStarted(message["preview-only"]);
                     break;
                 case "StreamStopping":
-                    this._onStreamStopping(message);
+                    this.onStreamStopped(message["preview-only"]);
                     break;
                 case "SwitchScenes":
                     this.onSceneSwitched(message["scene-name"]);
                     break;
+                case "StreamStatus":
+                    this.onStatusUpdate(message.streaming, message["preview-only"], message["bytes-per-sec"],
+                        message.strain, message["total-stream-time"], message["num-total-frames"],
+                        message["num-dropped-frames"], message.fps);
+                    break;
+                case "ScenesChanged":
+                    // Get new scene list before we call onScenesChanged
+                    // Why this isn't default behaviour is beyond me
+                    this.getSceneList(function(currentScene, scenes) {
+                        self.onScenesChanged(scenes);
+                    });
+                    break;
+                case "SourceOrderChanged":
+                    // Call getCurrentScene to get full source details
+                    this.getCurrentScene(function(scene) {
+                        self.onSourceOrderChanged(scene.sources);
+                    });
+                    break;
+                case "RepopulateSources":
+                    var sources = [];
+                    message.sources.forEach(function(source) {
+                        sources.push(_convertToOBSSource(source));
+                    });
+                    this.onSourceAddedOrRemoved(sources);
+                    break;
+                case "SourceChanged":
+                    this.onSourceChanged(message["source-name"], _convertToOBSSource(message.source));
+                    break;
                 default:
-                    console.warn("[OBSRemote] Unknown OBS update type: " + updateType);
+                    console.warn("[OBSRemote] Unknown OBS update type:", updateType, ", full message:");
+                    console.warn(message);
             }
         } else {
             var msgId = message["message-id"];
@@ -448,16 +553,6 @@
             callback(message);
             delete this._responseCallbacks[msgId];
         }
-    };
-
-    OBSRemote.prototype._onStreamStarting = function(message) {
-        var previewOnly = message["preview-only"];
-        this.onStreamStarted(previewOnly);
-    };
-
-    OBSRemote.prototype._onStreamStopping = function(message) {
-        var previewOnly = message["preview-only"];
-        this.onStreamStopped(previewOnly);
     };
 
     function _webCryptoHash(pass, callback) {
