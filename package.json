@@ -4,7 +4,6 @@
   "description": "OBS Remote API for Node.JS and browsers",
   "main": "index.js",
   "dependencies": {
-    "crypto": "0.0.3",
     "ws": "^0.6.3"
   },
   "devDependencies": {
@@ -19,7 +18,8 @@
   "files" : [
     "LICENSE",
     "dist/obs-remote.js",
-    "index.js"
+    "index.js",
+    "README.md"
   ],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
