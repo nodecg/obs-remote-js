@@ -232,7 +232,7 @@
 
     /**
      * Tells OBS to switch to the given scene name
-     * If successful the onSceneSwitched() callback will be called
+     * If successful onSceneSwitched will be called
      * @param sceneName name of scene to switch to
      */
     OBSRemote.prototype.setCurrentScene = function(sceneName) {
@@ -440,8 +440,20 @@
      */
     OBSRemote.prototype.onSourceChanged = function(originalName, source) {};
 
+    /**
+     * Called when the microphone volume changes, or is muted
+     * @param volume
+     * @param muted
+     * @param adjusting
+     */
     OBSRemote.prototype.onMicrophoneVolumeChanged = function(volume, muted, adjusting) {};
 
+    /**
+     * Called when the desktop volume changes, or is muted
+     * @param volume
+     * @param muted
+     * @param adjusting
+     */
     OBSRemote.prototype.onDesktopVolumeChanged = function(volume, muted, adjusting) {};
 
     OBSRemote.prototype._sendMessage = function(requestType, args, callback) {
