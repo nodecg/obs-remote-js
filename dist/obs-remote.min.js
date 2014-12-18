@@ -1,5 +1,5 @@
 /*!
- * OBS Remote JS API v1.0.0 (https://github.com/nodecg/obs-remote-js)
+ * OBS Remote JS API v1.0.1 (https://github.com/nodecg/obs-remote-js)
  * Copyright 2014 Matthew McNamara <matt@mattmcn.com>
  * Licensed under MIT (https://github.com/nodecg/obs-remote-js/blob/master/LICENSE)
  */
