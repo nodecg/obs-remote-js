@@ -1,8 +1,21 @@
 (function () {
     'use strict';
 
+    var OBSSource = {};
+    var OBSScene = {};
+
+    if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
+        OBSScene = module.exports.OBSScene;
+        OBSSource = module.exports.OBSSource;
+    } else {
+        OBSScene = window.OBSScene;
+        OBSSource = window.OBSSource;
+    }
+
     function OBSRemote() {
-        Object.defineProperty(this, "apiVersion", {value: 1.1, writable: false});
+        OBSRemote.API_VERSION = 1.1;
+        OBSRemote.DEFAULT_PORT = 4444;
+        OBSRemote.WS_PROTOCOL = "obsapi";
 
         this._connected = false;
         this._socket = undefined;
@@ -13,26 +26,34 @@
     }
 
     // IE11 crypto object is prefixed
-    var crypto = window.crypto || window.msCrypto || {};
+    var crypto = {};
+    var WebSocket = {};
 
-    OBSRemote.prototype._authHash = _webCryptoHash;
+    if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
+        crypto = require('crypto');
+        OBSRemote.prototype._authHash = _nodeCryptoHash;
 
-    if (typeof crypto.subtle === "undefined") {
-        // Safari crypto.subtle is prefixed, all other browsers use subtle or don't implement
-        if (typeof crypto.webkitSubtle === "undefined") {
-            // Native crypto not available, fall back to CryptoJS
-            if (typeof CryptoJS === "undefined") {
-                throw new Error("OBS Remote requires CryptoJS when native crypto is not available!");
+        WebSocket = require('ws');
+    } else {
+        crypto = window.crypto || window.msCrypto || {};
+        OBSRemote.prototype._authHash = _webCryptoHash;
+
+        if (typeof crypto.subtle === "undefined") {
+            // Safari crypto.subtle is prefixed, all other browsers use subtle or don't implement
+            if (typeof crypto.webkitSubtle === "undefined") {
+                // Native crypto not available, fall back to CryptoJS
+                if (typeof CryptoJS === "undefined") {
+                    throw new Error("OBS Remote requires CryptoJS when native crypto is not available!");
+                }
+
+                OBSRemote.prototype._authHash = _cryptoJSHash;
+            } else {
+                crypto.subtle = crypto.webkitSubtle;
             }
-
-            OBSRemote.prototype._authHash = _cryptoJSHash;
-        } else {
-            crypto.subtle = crypto.webkitSubtle;
         }
-    }
 
-    Object.defineProperty(OBSRemote, "DEFAULT_PORT", {value: 4444, writable: false});
-    Object.defineProperty(OBSRemote, "WS_PROTOCOL", {value: "obsapi", writable: false});
+        WebSocket = window.WebSocket;
+    }
 
     /**
      * Try to connect to OBS, with optional password
@@ -64,7 +85,11 @@
         }
 
         // Connect and setup WebSocket callbacks
-        this._socket = new WebSocket("ws://" + address, OBSRemote.WS_PROTOCOL);
+        if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
+            this._socket = new WebSocket("ws://" + address, {protocol: OBSRemote.WS_PROTOCOL});
+        } else {
+            this._socket = new WebSocket("ws://" + address, OBSRemote.WS_PROTOCOL);
+        }
 
         var self = this;
 
@@ -85,7 +110,7 @@
         };
 
         this._socket.onerror = function(event) {
-            self.onConnectionFailed();
+            self.onConnectionFailed(event);
             self._connected = false;
         };
 
@@ -415,6 +440,10 @@
      */
     OBSRemote.prototype.onSourceChanged = function(originalName, source) {};
 
+    OBSRemote.prototype.onMicrophoneVolumeChanged = function(volume, muted, adjusting) {};
+
+    OBSRemote.prototype.onDesktopVolumeChanged = function(volume, muted, adjusting) {};
+
     OBSRemote.prototype._sendMessage = function(requestType, args, callback) {
         if (this._connected) {
             var msgId = this._getNextMsgId();
@@ -499,6 +528,14 @@
                 case "SourceChanged":
                     this.onSourceChanged(message["source-name"], _convertToOBSSource(message.source));
                     break;
+                case "VolumeChanged":
+                    // Which callback do we use
+                    var volumeCallback = (message.channel === "desktop") ?
+                        this.onDesktopVolumeChanged :
+                        this.onMicrophoneVolumeChanged;
+
+                    volumeCallback(message.volume, message.muted, !message.finalValue);
+                    break;
                 default:
                     console.warn("[OBSRemote] Unknown OBS update type:", updateType, ", full message:");
                     console.warn(message);
@@ -550,6 +587,26 @@
         var authResp = CryptoJS.SHA256(utf8AuthHash + utf8Challenge).toString(CryptoJS.enc.Base64);
 
         callback(authResp);
+    }
+
+    function _nodeCryptoHash(pass, callback) {
+        var authHasher = crypto.createHash('sha256');
+
+        var utf8Pass = _encodeStringAsUTF8(pass);
+        var utf8Salt = _encodeStringAsUTF8(this._auth.salt);
+
+        authHasher.update(utf8Pass + utf8Salt);
+        var authHash = authHasher.digest('base64');
+
+        var respHasher = crypto.createHash('sha256');
+
+        var utf8AuthHash = _encodeStringAsUTF8(authHash);
+        var utf8Challenge = _encodeStringAsUTF8(this._auth.challenge);
+
+        respHasher.update(utf8AuthHash + utf8Challenge);
+        var respHash = respHasher.digest('base64');
+
+        callback(respHash);
     }
 
     function _encodeStringAsUTF8(string) {

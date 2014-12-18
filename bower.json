@@ -7,7 +7,7 @@
   ],
   "description": "OBS Remote API for Node.JS and browsers",
   "main": [
-    "src/obs-remote.js"
+    "dist/obs-remote.js"
   ],
   "keywords": [
     "obs",

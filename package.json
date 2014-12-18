@@ -2,8 +2,11 @@
   "name": "obs-remote",
   "version": "1.0.0",
   "description": "OBS Remote API for Node.JS and browsers",
-  "main": "src/obs-remote.js",
-  "dependencies": {},
+  "main": "index.js",
+  "dependencies": {
+    "crypto": "0.0.3",
+    "ws": "^0.6.3"
+  },
   "devDependencies": {
     "grunt": "^0.4.5",
     "grunt-contrib-clean": "^0.6.0",
@@ -13,6 +16,11 @@
     "load-grunt-tasks": "^1.0.0",
     "time-grunt": "^1.0.0"
   },
+  "files" : [
+    "LICENSE",
+    "dist/obs-remote.js",
+    "index.js"
+  ],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
