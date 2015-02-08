@@ -54,14 +54,14 @@
     function OBSRemote() {
         OBSRemote.API_VERSION = 1.1;
         OBSRemote.DEFAULT_PORT = 4444;
-        OBSRemote.WS_PROTOCOL = "obsapi";
+        OBSRemote.WS_PROTOCOL = 'obsapi';
 
         this._connected = false;
         this._socket = undefined;
         this._messageCounter = 0;
         this._responseCallbacks = {};
 
-        this._auth = {salt: "", challenge: ""};
+        this._auth = {salt: '', challenge: ''};
     }
 
     // IE11 crypto object is prefixed
@@ -70,22 +70,22 @@
 
     if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
         crypto = require('crypto');
-        OBSRemote.prototype._authHash = _nodeCryptoHash;
+        OBSRemote.prototype._authHash = OBSRemote.prototype._nodeCryptoHash;
 
         WebSocket = require('ws');
     } else {
         crypto = window.crypto || window.msCrypto || {};
-        OBSRemote.prototype._authHash = _webCryptoHash;
+        OBSRemote.prototype._authHash = OBSRemote.prototype._webCryptoHash;
 
-        if (typeof crypto.subtle === "undefined") {
+        if (typeof crypto.subtle === 'undefined') {
             // Safari crypto.subtle is prefixed, all other browsers use subtle or don't implement
-            if (typeof crypto.webkitSubtle === "undefined") {
+            if (typeof crypto.webkitSubtle === 'undefined') {
                 // Native crypto not available, fall back to CryptoJS
-                if (typeof CryptoJS === "undefined") {
-                    throw new Error("OBS Remote requires CryptoJS when native crypto is not available!");
+                if (typeof CryptoJS === 'undefined') {
+                    throw new Error('OBS Remote requires CryptoJS when native crypto is not available!');
                 }
 
-                OBSRemote.prototype._authHash = _cryptoJSHash;
+                OBSRemote.prototype._authHash = OBSRemote.prototype._cryptoJSHash;
             } else {
                 crypto.subtle = crypto.webkitSubtle;
             }
@@ -102,19 +102,19 @@
      */
     OBSRemote.prototype.connect = function(address, password) {
         // Password is optional, set to empty string if undefined
-        password = (typeof password === "undefined") ?
-            "" :
+        password = (typeof password === 'undefined') ?
+            '' :
             password;
 
         // Check for address
-        address = (typeof address === "undefined" || address === "") ?
-            "localhost" :
+        address = (typeof address === 'undefined' || address === '') ?
+            'localhost' :
             address;
 
         // Check for port number, if missing use 4444
         var colonIndex = address.indexOf(':');
         if (colonIndex < 0 || colonIndex === address.length - 1) {
-            address += ":" + OBSRemote.DEFAULT_PORT;
+            address += ':' + OBSRemote.DEFAULT_PORT;
         }
 
         // Check if we already have a connection
@@ -125,14 +125,14 @@
 
         // Connect and setup WebSocket callbacks
         if (typeof module !== 'undefined' && typeof module.exports !== 'undefined') {
-            this._socket = new WebSocket("ws://" + address, {protocol: OBSRemote.WS_PROTOCOL});
+            this._socket = new WebSocket('ws://' + address, {protocol: OBSRemote.WS_PROTOCOL});
         } else {
-            this._socket = new WebSocket("ws://" + address, OBSRemote.WS_PROTOCOL);
+            this._socket = new WebSocket('ws://' + address, OBSRemote.WS_PROTOCOL);
         }
 
         var self = this;
 
-        this._socket.onopen = function(event) {
+        this._socket.onopen = function() {
             self._connected = true;
             self.onConnectionOpened();
 
@@ -143,7 +143,7 @@
             });
         };
 
-        this._socket.onclose = function(code, reason, wasClean) {
+        this._socket.onclose = function() {
             self.onConnectionClosed();
             self._connected = false;
         };
@@ -168,12 +168,11 @@
         this._authHash(password, function(authResp) {
 
             function cb(message) {
-                var successful = (message.status === "ok");
+                var successful = (message.status === 'ok');
                 var remainingAttempts = 0;
 
                 if (!successful) {
-                    // TODO: improve and pull request I guess?
-                    // ¯\_(ツ)_/¯
+                    // eugh
                     remainingAttempts = message.error.substr(43);
 
                     self.onAuthenticationFailed(remainingAttempts);
@@ -182,8 +181,8 @@
                 }
             }
 
-            self._sendMessage("Authenticate", {
-                "auth": authResp
+            self._sendMessage('Authenticate', {
+                'auth': authResp
             }, cb);
         });
     };
@@ -195,12 +194,12 @@
      */
     OBSRemote.prototype.toggleStream = function(previewOnly) {
         // previewOnly is optional, default to false
-        previewOnly = (typeof previewOnly === "undefined") ?
+        previewOnly = (typeof previewOnly === 'undefined') ?
             false :
             previewOnly;
 
-        this._sendMessage("StartStopStreaming", {
-            "preview-only": previewOnly
+        this._sendMessage('StartStopStreaming', {
+            'preview-only': previewOnly
         });
     };
 
@@ -213,7 +212,7 @@
             callback(message.version);
         }
 
-        this._sendMessage("GetVersion", cb);
+        this._sendMessage('GetVersion', cb);
     };
 
     /**
@@ -233,7 +232,7 @@
             callback(authRequired);
         }
 
-        this._sendMessage("GetAuthRequired", cb);
+        this._sendMessage('GetAuthRequired', cb);
     };
 
     /**
@@ -242,7 +241,7 @@
      */
     OBSRemote.prototype.getSceneList = function(callback) {
         function cb (message) {
-            var currentScene = message["current-scene"];
+            var currentScene = message['current-scene'];
             var scenes = [];
 
             message.scenes.forEach(function(scene) {
@@ -252,7 +251,7 @@
             callback(currentScene, scenes);
         }
 
-        this._sendMessage("GetSceneList", cb);
+        this._sendMessage('GetSceneList', cb);
     };
 
     /**
@@ -266,7 +265,7 @@
             callback(obsScene);
         }
 
-        this._sendMessage("GetCurrentScene", cb);
+        this._sendMessage('GetCurrentScene', cb);
     };
 
     /**
@@ -275,8 +274,8 @@
      * @param sceneName name of scene to switch to
      */
     OBSRemote.prototype.setCurrentScene = function(sceneName) {
-        this._sendMessage("SetCurrentScene", {
-            "scene-name": sceneName
+        this._sendMessage('SetCurrentScene', {
+            'scene-name': sceneName
         });
     };
 
@@ -288,15 +287,15 @@
         var sourceNames = sources;
 
         // Support Array[OBSSource] for convenience
-        if (typeof sources[1] === "OBSSource") {
+        if (sources[1] instanceof 'OBSSource') {
             sourceNames = [];
             sources.forEach(function (source) {
                 sourceNames.push(source.name);
             });
         }
 
-        this._sendMessage("SetSourcesOrder", {
-            "scene-names": sourceNames
+        this._sendMessage('SetSourcesOrder', {
+            'scene-names': sourceNames
         });
     };
 
@@ -306,7 +305,7 @@
      * @param shouldRender
      */
     OBSRemote.prototype.setSourceRender = function(sourceName, shouldRender) {
-        this._sendMessage("SetSourceRender", {
+        this._sendMessage('SetSourceRender', {
             source: sourceName,
             render: shouldRender
         });
@@ -318,10 +317,10 @@
      */
     OBSRemote.prototype.getStreamingStatus = function(callback) {
         function cb(message) {
-            callback(message.streaming, message["preview-only"]);
+            callback(message.streaming, message['preview-only']);
         }
 
-        this._sendMessage("GetStreamingStatus", cb);
+        this._sendMessage('GetStreamingStatus', cb);
     };
 
     /**
@@ -330,10 +329,10 @@
      */
     OBSRemote.prototype.getVolumes = function(callback) {
         function cb(message) {
-            callback(message["mic-volume"], message["mic-muted"], message["desktop-volume"], message["desktop-muted"]);
+            callback(message['mic-volume'], message['mic-muted'], message['desktop-volume'], message['desktop-muted']);
         }
 
-        this._sendMessage("GetVolumes", cb);
+        this._sendMessage('GetVolumes', cb);
     };
 
     /**
@@ -342,12 +341,8 @@
      * @param adjusting Optional, defaults to false
      */
     OBSRemote.prototype.setMicrophoneVolume = function(volume, adjusting) {
-        adjusting = (typeof adjusting === "undefined") ?
-            false :
-            adjusting;
-
-        this._sendMessage("SetVolume", {
-            channel: "microphone",
+        this._sendMessage('SetVolume', {
+            channel: 'microphone',
             volume: volume,
             final: !adjusting
         });
@@ -357,8 +352,8 @@
      * Toggles microphone mute state
      */
     OBSRemote.prototype.toggleMicrophoneMute = function() {
-        this._sendMessage("ToggleMute", {
-            channel: "microphone"
+        this._sendMessage('ToggleMute', {
+            channel: 'microphone'
         });
     };
 
@@ -368,12 +363,8 @@
      * @param adjusting Optional, defaults to false
      */
     OBSRemote.prototype.setDesktopVolume = function(volume, adjusting) {
-        adjusting = (typeof adjusting === "undefined") ?
-            false :
-            adjusting;
-
-        this._sendMessage("SetVolume", {
-            channel: "desktop",
+        this._sendMessage('SetVolume', {
+            channel: 'desktop',
             volume: volume,
             final: !adjusting
         });
@@ -383,14 +374,16 @@
      * Toggles desktop mute state
      */
     OBSRemote.prototype.toggleDesktopMute = function() {
-        this._sendMessage("ToggleMute", {
-            channel: "desktop"
+        this._sendMessage('ToggleMute', {
+            channel: 'desktop'
         });
     };
 
     /**
      * OBSRemote API callbacks
      */
+
+    /* jshint ignore:start */
 
     /**
      * Called when the connection to OBS is made
@@ -446,7 +439,8 @@
      * @param droppedFrames
      * @param framesPerSecond
      */
-    OBSRemote.prototype.onStatusUpdate = function(streaming, previewing, bytesPerSecond, strain, streamDurationInMS, totalFrames, droppedFrames, framesPerSecond) {};
+    OBSRemote.prototype.onStatusUpdate = function(streaming, previewing, bytesPerSecond, strain, streamDurationInMS,
+                                                  totalFrames, droppedFrames, framesPerSecond) {};
 
     /**
      * Called when OBS switches scene
@@ -495,31 +489,29 @@
      */
     OBSRemote.prototype.onDesktopVolumeChanged = function(volume, muted, adjusting) {};
 
+    /* jshint ignore:end */
+
     OBSRemote.prototype._sendMessage = function(requestType, args, callback) {
         if (this._connected) {
             var msgId = this._getNextMsgId();
 
             // Callback but no args
-            if (typeof args === "function") {
+            if (typeof args === 'function') {
                 callback = args;
                 args = {};
             }
 
             // Ensure message isn't undefined, use empty object
-            args = (typeof args === "undefined") ?
-                {} :
-                args;
+            args = args || {};
 
             // Ensure callback isn't undefined, use empty function
-            callback = (typeof callback === "undefined") ?
-                function () {} :
-                callback;
+            callback = callback || function () {};
 
             // Store the callback with the message ID
             this._responseCallbacks[msgId] = callback;
 
-            args["message-id"] = msgId;
-            args["request-type"] = requestType;
+            args['message-id'] = msgId;
+            args['request-type'] = requestType;
 
             var serialisedMsg = JSON.stringify(args);
             this._socket.send(serialisedMsg);
@@ -528,7 +520,7 @@
 
     OBSRemote.prototype._getNextMsgId = function() {
         this._messageCounter += 1;
-        return this._messageCounter + "";
+        return this._messageCounter + '';
     };
 
     OBSRemote.prototype._messageReceived = function(msg) {
@@ -539,63 +531,62 @@
 
         var self = this;
         // Check if this is an update event
-        var updateType = message["update-type"];
+        var updateType = message['update-type'];
         if (updateType) {
             switch (updateType) {
-                case "StreamStarting":
-                    this.onStreamStarted(message["preview-only"]);
+                case 'StreamStarting':
+                    this.onStreamStarted(message['preview-only']);
                     break;
-                case "StreamStopping":
-                    this.onStreamStopped(message["preview-only"]);
+                case 'StreamStopping':
+                    this.onStreamStopped(message['preview-only']);
                     break;
-                case "SwitchScenes":
-                    this.onSceneSwitched(message["scene-name"]);
+                case 'SwitchScenes':
+                    this.onSceneSwitched(message['scene-name']);
                     break;
-                case "StreamStatus":
-                    this.onStatusUpdate(message.streaming, message["preview-only"], message["bytes-per-sec"],
-                        message.strain, message["total-stream-time"], message["num-total-frames"],
-                        message["num-dropped-frames"], message.fps);
+                case 'StreamStatus':
+                    this.onStatusUpdate(message.streaming, message['preview-only'], message['bytes-per-sec'],
+                        message.strain, message['total-stream-time'], message['num-total-frames'],
+                        message['num-dropped-frames'], message.fps);
                     break;
-                case "ScenesChanged":
+                case 'ScenesChanged':
                     // Get new scene list before we call onScenesChanged
                     // Why this isn't default behaviour is beyond me
                     this.getSceneList(function(currentScene, scenes) {
                         self.onScenesChanged(scenes);
                     });
                     break;
-                case "SourceOrderChanged":
+                case 'SourceOrderChanged':
                     // Call getCurrentScene to get full source details
                     this.getCurrentScene(function(scene) {
                         self.onSourceOrderChanged(scene.sources);
                     });
                     break;
-                case "RepopulateSources":
+                case 'RepopulateSources':
                     var sources = [];
                     message.sources.forEach(function(source) {
                         sources.push(_convertToOBSSource(source));
                     });
                     this.onSourceAddedOrRemoved(sources);
                     break;
-                case "SourceChanged":
-                    this.onSourceChanged(message["source-name"], _convertToOBSSource(message.source));
+                case 'SourceChanged':
+                    this.onSourceChanged(message['source-name'], _convertToOBSSource(message.source));
                     break;
-                case "VolumeChanged":
+                case 'VolumeChanged':
                     // Which callback do we use
-                    var volumeCallback = (message.channel === "desktop") ?
+                    var volumeCallback = (message.channel === 'desktop') ?
                         this.onDesktopVolumeChanged :
                         this.onMicrophoneVolumeChanged;
 
                     volumeCallback(message.volume, message.muted, !message.finalValue);
                     break;
                 default:
-                    console.warn("[OBSRemote] Unknown OBS update type:", updateType, ", full message:");
-                    console.warn(message);
+                    console.warn('[OBSRemote] Unknown OBS update type:', updateType, ', full message:', message);
             }
         } else {
-            var msgId = message["message-id"];
+            var msgId = message['message-id'];
 
-            if (message.status === "error") {
-                console.error("[OBSRemote] Error:", message.error);
+            if (message.status === 'error') {
+                console.error('[OBSRemote] Error:', message.error);
             }
 
             var callback = this._responseCallbacks[msgId];
@@ -604,29 +595,29 @@
         }
     };
 
-    function _webCryptoHash(pass, callback) {
+    OBSRemote.prototype._webCryptoHash = function(pass, callback) {
         var utf8Pass = _encodeStringAsUTF8(pass);
         var utf8Salt = _encodeStringAsUTF8(this._auth.salt);
 
         var ab1 = _stringToArrayBuffer(utf8Pass + utf8Salt);
 
         var self = this;
-        crypto.subtle.digest("SHA-256", ab1)
+        crypto.subtle.digest('SHA-256', ab1)
             .then(function(authHash) {
                 var utf8AuthHash = _encodeStringAsUTF8(_arrayBufferToBase64(authHash));
                 var utf8Challenge = _encodeStringAsUTF8(self._auth.challenge);
 
                 var ab2 = _stringToArrayBuffer(utf8AuthHash + utf8Challenge);
 
-                crypto.subtle.digest("SHA-256", ab2)
+                crypto.subtle.digest('SHA-256', ab2)
                     .then(function(authResp) {
                         var authRespB64 = _arrayBufferToBase64(authResp);
                         callback(authRespB64);
                     });
             });
-    }
+    };
 
-    function _cryptoJSHash(pass, callback) {
+    OBSRemote.prototype._cryptoJSHash = function(pass, callback) {
         var utf8Pass = _encodeStringAsUTF8(pass);
         var utf8Salt = _encodeStringAsUTF8(this._auth.salt);
 
@@ -638,9 +629,9 @@
         var authResp = CryptoJS.SHA256(utf8AuthHash + utf8Challenge).toString(CryptoJS.enc.Base64);
 
         callback(authResp);
-    }
+    };
 
-    function _nodeCryptoHash(pass, callback) {
+    OBSRemote.prototype._nodeCryptoHash = function(pass, callback) {
         var authHasher = crypto.createHash('sha256');
 
         var utf8Pass = _encodeStringAsUTF8(pass);
@@ -658,10 +649,10 @@
         var respHash = respHasher.digest('base64');
 
         callback(respHash);
-    }
+    };
 
     function _encodeStringAsUTF8(string) {
-        return unescape(encodeURIComponent(string));
+        return unescape(encodeURIComponent(string)); //jshint ignore:line
     }
 
     function _stringToArrayBuffer(string) {
@@ -673,27 +664,15 @@
     }
 
     function _arrayBufferToBase64(arrayBuffer) {
-        var alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-        var base64String = "";
-        var n, p, bits;
+        var binary = '';
+        var bytes = new Uint8Array(arrayBuffer);
 
-        var uint8 = new Uint8Array(arrayBuffer);
-        var len = arrayBuffer.byteLength * 8;
-        for (var offset = 0; offset < len; offset += 6) {
-            n = (offset/8) | 0;
-            p = offset % 8;
-            bits = ((uint8[n] || 0) << p) >> 2;
-            if (p > 2) {
-                bits |= (uint8[n+1] || 0) >> (10 - p);
-            }
-            base64String += alphabet.charAt(bits & 63);
+        var length = bytes.byteLength;
+        for (var i = 0; i < length; i++) {
+            binary += String.fromCharCode(bytes[i]);
         }
-        base64String += (p == 4) ?
-            '=' :
-            (p == 6) ?
-                '==':
-                '';
-        return base64String;
+
+        return btoa(binary);
     }
 
     function _convertToOBSScene(scene) {
