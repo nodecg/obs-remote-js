@@ -1,4 +1,4 @@
-(function () {
+(function() {
     'use strict';
 
     function OBSSource(width, height, x, y, name, rendered) {

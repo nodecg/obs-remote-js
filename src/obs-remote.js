@@ -1,4 +1,4 @@
-(function () {
+(function() {
     'use strict';
 
     var OBSSource = {};
@@ -171,7 +171,7 @@
      * @param callback function(Number version)
      */
     OBSRemote.prototype.getVersion = function(callback) {
-        function cb (message) {
+        function cb(message) {
             callback(message.version);
         }
 
@@ -184,7 +184,8 @@
      */
     OBSRemote.prototype.isAuthRequired = function(callback) {
         var self = this;
-        function cb (message) {
+
+        function cb(message) {
             var authRequired = message.authRequired;
 
             if (authRequired) {
@@ -203,7 +204,7 @@
      * @param callback function(String currentScene, Array scenes)
      */
     OBSRemote.prototype.getSceneList = function(callback) {
-        function cb (message) {
+        function cb(message) {
             var currentScene = message['current-scene'];
             var scenes = [];
 
@@ -222,7 +223,7 @@
      * @param callback function(OBSScene scene)
      */
     OBSRemote.prototype.getCurrentScene = function(callback) {
-        function cb (message) {
+        function cb(message) {
             var obsScene = _convertToOBSScene(message);
 
             callback(obsScene);
@@ -252,7 +253,7 @@
         // Support Array[OBSSource] for convenience
         if (sources[1] instanceof 'OBSSource') {
             sourceNames = [];
-            sources.forEach(function (source) {
+            sources.forEach(function(source) {
                 sourceNames.push(source.name);
             });
         }
@@ -468,7 +469,7 @@
             args = args || {};
 
             // Ensure callback isn't undefined, use empty function
-            callback = callback || function () {};
+            callback = callback || function() {};
 
             // Store the callback with the message ID
             this._responseCallbacks[msgId] = callback;

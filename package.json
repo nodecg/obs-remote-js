@@ -29,10 +29,7 @@
     "url": "https://github.com/nodecg/obs-remote-js.git"
   },
   "author": "Matthew McNamara <matt@mattmcn.com>",
-  "license": {
-    "type": "MIT",
-    "url": "https://github.com/nodecg/obs-remote-js/blob/master/LICENSE"
-  },
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/nodecg/obs-remote-js/issues"
   },
