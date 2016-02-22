@@ -4,7 +4,7 @@
   "description": "OBS Remote API for Node.JS and browsers",
   "main": "index.js",
   "dependencies": {
-    "ws": "^0.6.3"
+    "ws": "^1.0.1"
   },
   "devDependencies": {
     "grunt": "^0.4.5",
