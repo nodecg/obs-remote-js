@@ -105,7 +105,9 @@
         };
 
         this._socket.onclose = function() {
-            self.onConnectionClosed();
+            if (self._connected) {
+                self.onConnectionClosed();
+            }
             self._connected = false;
         };
 
